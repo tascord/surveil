@@ -7,8 +7,8 @@ export default new class Database {
     public waiting: ((connection: Sequelize) => void)[] = [];
     public ready = false;
 
-    public connection = new Sequelize('surveil', 'tascord', 'Teacher22', {
-        host: 'localhost',
+    public connection = new Sequelize(process.env.database!, process.env.username!, process.env.password!, {
+        host: process.env.host ?? 'localhost',
         dialect: 'postgres',
         logging: false,
       });

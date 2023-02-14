@@ -3,6 +3,7 @@ import { join } from "path";
 import DataMapper from "./classes/DataMapper";
 import ModelParser, { RawField } from "./classes/ModelParser";
 import server from "./server";
+import { config } from "dotenv";
 
 // Defaults
 export { default as DataMapper } from "./classes/DataMapper";
@@ -17,6 +18,7 @@ class Manager {
     private model_shape: RawField[];
 
     constructor() {
+        config();
         this.model_parser = new ModelParser([]);
 
         const mapper_location = join(process.cwd(), 'mapper.js');
@@ -24,7 +26,7 @@ class Manager {
 
         const mapper = require(mapper_location) as DataMapper;
         const data = mapper.export();
-        
+
         this.model_shape = data.fields;
         this.run(data);
     }
