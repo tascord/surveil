@@ -3,3 +3,4 @@ plugins/
 node_modules/
 mapper.js
 .env
+*.json
