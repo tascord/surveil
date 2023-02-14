@@ -1,0 +1,5 @@
+dist/
+plugins/
+node_modules/
+mana_parser.js
+mapper.js

@@ -1,0 +1,21 @@
+{
+  "name": "surveil",
+  "version": "1.0.0",
+  "description": "A user friendly way to search through lots of things",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsc-watch --onSuccess \"node dist/index.js\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^18.13.0",
+    "tsc-watch": "^6.0.0"
+  },
+  "dependencies": {
+    "h3": "^1.4.0",
+    "pg": "^8.9.0",
+    "sequelize": "^6.28.0"
+  }
+}

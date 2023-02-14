@@ -1,0 +1,19 @@
+{
+	"exclude": [
+		"dist/",
+		"test/"
+	],
+	"compilerOptions": {
+		"strict": true,
+		"declaration": true,
+		"declarationMap": true,
+		"importHelpers": true,
+		"pretty": true,
+		"rootDir": "src",
+		"outDir": "dist",
+		"target": "es6",
+		"module": "commonjs",
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+	}
+}
