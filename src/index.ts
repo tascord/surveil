@@ -30,13 +30,13 @@ class Manager {
         this.run(data);
     }
 
-    public run(exported: { data: Array<{ [key: string]: any }>, fields: RawField[], overwrite: boolean, skip: boolean }) {
+    public run(exported: { data: Array<{ [key: string]: any }>, fields: RawField[], overwrite: boolean, skip: boolean, port: number }) {
 
-        const { fields, data, overwrite, skip } = exported;
+        const { fields, data, overwrite, skip, port } = exported;
         this.model_parser = new ModelParser(data, overwrite);
         this.model_parser.parse(fields, skip);
 
-        server();
+        server(port);
     }
 
     public get_model_field(name: string) {

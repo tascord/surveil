@@ -2,7 +2,7 @@ import { createServer } from "http";
 import { createApp, createRouter, eventHandler, getQuery, readBody, toNodeListener } from "h3";
 import ParseQuery from "./classes/QueryParser";
 
-export default async function () {
+export default async function (port: number) {
 
     const app = createApp();
     const router = createRouter();
@@ -19,6 +19,6 @@ export default async function () {
     app.use(router);
 
     const server = createServer(toNodeListener(app));
-    server.listen(3000, () => console.log("• Server started on port 3000"));
+    server.listen(port, () => console.log("• Server started on port 3000"));
 
 }

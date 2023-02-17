@@ -14,6 +14,7 @@ export default class DataMapper {
     private _fields: RawField[] = [];
     private _overwrite = false;
     private _skip = false;
+    private _port = 3000;
 
     constructor(file_location: string, strategy: 'json' | string) {
         this._file_location = file_location;
@@ -63,6 +64,11 @@ export default class DataMapper {
         return this;
     }
 
+    public port(value = 3000) {
+        this._port = value;
+        return this;
+    }
+
     public export() {
 
         const buffer = readFileSync(this._file_location);
@@ -79,7 +85,8 @@ export default class DataMapper {
             data,
             overwrite: this._overwrite,
             skip: this._skip,
-            fields: this._fields
+            fields: this._fields,
+            port: this._port
         };
     }
 
