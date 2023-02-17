@@ -13,7 +13,7 @@ export default async function () {
         if (Array.isArray(page_query)) page_query = page_query[0];
         
         let page = parseInt(page_query||'') || 0;
-        return ParseQuery(await readBody(event), page);
+        return ParseQuery((await readBody(event)).trim(), page);
     }));
 
     app.use(router);

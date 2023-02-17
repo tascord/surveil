@@ -13,6 +13,7 @@ export default class DataMapper {
     private readonly _strategy: 'json' | string;
     private _fields: RawField[] = [];
     private _overwrite = false;
+    private _skip = false;
 
     constructor(file_location: string, strategy: 'json' | string) {
         this._file_location = file_location;
@@ -22,11 +23,22 @@ export default class DataMapper {
     public map(
         name: RawField['name'],
         type: RawField['type'],
-        mapped_name?: RawField['mapped_name'],
-        parser?: RawField['parser'],
-        allow_null?: RawField['allow_null'],
-        unique?: RawField['unique']
+        options: {
+            mapped_name?: RawField['mapped_name'],
+            parser?: RawField['parser'],
+            allow_null?: RawField['allow_null'],
+            unique?: RawField['unique'],
+            alias?: RawField['alias']
+        } = {}
     ) {
+
+        const {
+            mapped_name,
+            parser,
+            allow_null,
+            unique,
+            alias
+        } = options;
 
         this._fields.push({
             name,
@@ -34,7 +46,8 @@ export default class DataMapper {
             mapped_name,
             parser,
             allow_null,
-            unique
+            unique,
+            alias
         });
 
         return this;
@@ -42,6 +55,11 @@ export default class DataMapper {
 
     public overwrite(value = true) {
         this._overwrite = value;
+        return this;
+    }
+
+    public skip(value = false) {
+        this._skip = value;
         return this;
     }
 
@@ -60,6 +78,7 @@ export default class DataMapper {
         return {
             data,
             overwrite: this._overwrite,
+            skip: this._skip,
             fields: this._fields
         };
     }

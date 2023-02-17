@@ -1,7 +1,7 @@
 import { DataTypes, ModelAttributes } from "sequelize";
 import Database from "../database";
 
-type GenericFieldType = 'integer' | 'float' | 'string' | 'boolean' | 'date' | 'text';
+type GenericFieldType = 'integer' | 'float' | 'string' | 'boolean' | 'date' | 'text' | 'json';
 type FieldType = GenericFieldType | `list-${GenericFieldType}`;
 type FieldParser = (value: string) => any;
 
@@ -12,6 +12,7 @@ export type RawField = {
     parser?: FieldParser;
     allow_null?: boolean;
     unique?: boolean;
+    alias?: string[];
 }
 
 const map_type = (type: FieldType): DataTypes.AbstractDataTypeConstructor | DataTypes.ArrayDataType<any> => {
@@ -28,6 +29,8 @@ const map_type = (type: FieldType): DataTypes.AbstractDataTypeConstructor | Data
             return DataTypes.DATE;
         case 'text':
             return DataTypes.TEXT;
+        case 'json':
+            return DataTypes.JSON;
         default:
             if (type.startsWith('list-')) {
                 const list_type = type.split('-')[1] as GenericFieldType;
@@ -72,10 +75,13 @@ export default class ModelParser {
 
     }
 
-    public async parse(raw_fields: RawField[]) {
+    public async parse(raw_fields: RawField[], skip: boolean) {
 
         // Create model
         const Item = await this.model(raw_fields);
+
+        // Skip if requested
+        if (skip) return;
 
         // Start transaction
         const transaction = await (await Database.get()).transaction();

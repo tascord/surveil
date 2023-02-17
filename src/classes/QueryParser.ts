@@ -1,11 +1,14 @@
 import { WhereOptions, Op as WhereOp } from "sequelize";
 import Manager from '../';
-import Database from "../database";
 import { RawField } from "./ModelParser";
 import PluginManager from "./PluginManager";
+import Database from "../database";
 
 const Ops = ['>', '<', '>=', '<=', '=', '!=', ':'] as const;
 export type Op = typeof Ops[number];
+
+const Keywords = ['and', 'or', 'not'] as const;
+export type Keyword = typeof Keywords[number];
 
 export interface QuerySegment {
     keys: string[];
@@ -13,17 +16,48 @@ export interface QuerySegment {
     parse(segment: string): WhereOptions<any>;
 }
 
+
 const tokenize = (query: string) => {
     let buffer = '';
     let in_string = false;
-    const tokens = [];
+    let tokens: (string | string[])[] = [];
 
     for (let i = 0; i < query.length; i++) {
         const char = query[i];
+
+        // Sub-parsing
+        if (char === '(' && !in_string) {
+
+            if (buffer.length > 0) {
+                tokens.push(buffer);
+                buffer = '';
+            }
+
+            let slice_buffer = '';
+            let balance = -1;
+            for (let j = i + 1; i < query.length; j += 1) {
+                if (query[j] === '(') balance -= 1;
+                if (query[j] === ')') balance += 1;
+
+                if (balance === 0) {
+                    i = j;
+                    break;
+                };
+
+                if (!query[j]) throw 'Unbalanced parentheses';
+                slice_buffer += query[j];
+            }
+
+            tokens.push(tokenize(slice_buffer) as string[]);
+            continue;
+        }
+
+        // Quotations
         if (char === '"') {
             in_string = !in_string;
             continue;
         }
+
         if (char === ' ' && !in_string) {
             if (buffer.length > 0) {
                 tokens.push(buffer);
@@ -35,7 +69,9 @@ const tokenize = (query: string) => {
     }
 
     if (buffer.length > 0) tokens.push(buffer);
+
     return tokens;
+
 }
 
 const ensure_op = (type: RawField['type'], op: Op) => {
@@ -55,7 +91,7 @@ const ensure_op = (type: RawField['type'], op: Op) => {
             return op === '=' || op === '!=' || op === '>' || op === '<' || op === '>=' || op === '<=';
 
         default:
-            if (type.startsWith('list')) return op === ':';
+            if (type.startsWith('list')) return op === ':' || op === '>=' || op === '=' || op === '!=';
             return false;
     }
 }
@@ -75,87 +111,191 @@ const fit_type = (field: RawField, initial: string) => {
     return value;
 }
 
+const keyword_op = (keyword: Keyword) => {
+    switch (keyword) {
+        case 'and': return WhereOp.and;
+        case 'or': return WhereOp.or;
+        case 'not': return WhereOp.not;
+    }
+}
+
+const parse_where = (raw_token: string): false | WhereOptions => {
+
+    // Ensure an operator is present
+    if (!Ops.some(op => raw_token.includes(op))) return false;
+
+    // Split tokens
+    let buffer = '';
+    let [op_key, op, valid, op_value] = ['', '' as Op, false, ''];
+    for (let i = 0; i < raw_token.length; i++) {
+        const char = raw_token[i];
+
+        if (Ops.includes(char as Op)) {
+            if (valid) {
+                op += char;
+                continue;
+            } else {
+                valid = true;
+                op_key = buffer;
+                op = char as Op;
+            }
+        } else {
+            if (!valid) buffer += char;
+            else {
+                op_value = raw_token.slice(op_key.length + op.length);
+            }
+        }
+
+    }
+
+    // Fetch field and plugin associations
+    const plugin = PluginManager.query_plugins.find(p => p.keys.includes(op_key) && p.ops.includes(op));
+
+    let field = Manager.get_model_field(op_key);
+    if (field && !ensure_op(field?.type, op)) field = undefined;
+
+    // Ensure a field or plugin is present
+    if (!field && !plugin) return false;
+
+    // Field where
+    if (field) {
+
+        const name = field.mapped_name ?? field.name;
+        let value = fit_type(field, op_value);
+
+        if (field.type === 'string' || field.type === 'text') {
+            if (op === ':') return { [name]: { [WhereOp.iLike]: `%${value}%` } };
+            if (op === '=') return { [name]: value };
+        }
+
+        if (field.type === 'integer' || field.type === 'float') {
+            if (op === '=') return { [name]: value };
+            if (op === '>') return { [name]: { [WhereOp.gt]: value } };
+            if (op === '<') return { [name]: { [WhereOp.lt]: value } };
+            if (op === '>=') return { [name]: { [WhereOp.gte]: value } };
+            if (op === '<=') return { [name]: { [WhereOp.lte]: value } };
+            if (op === '!=') return { [name]: { [WhereOp.ne]: value } };
+        }
+
+        if (field.type === 'boolean') {
+            if (op === '=') return { [name]: value };
+            if (op === '!=') return { [name]: { [WhereOp.ne]: value } };
+        }
+
+        if (field.type === 'date') {
+            if (op === '=') return { [name]: value };
+            if (op === '>') return { [name]: { [WhereOp.gt]: value } };
+            if (op === '<') return { [name]: { [WhereOp.lt]: value } };
+            if (op === '>=') return { [name]: { [WhereOp.gte]: value } };
+            if (op === '<=') return { [name]: { [WhereOp.lte]: value } };
+        }
+
+        if (field.type.startsWith('list')) {
+            if (op === ':') return { [name]: { [WhereOp.contains]: value } };
+            if (op === '=') return { [name]: { [WhereOp.eq]: value } };
+            if (op === '!=') return { [name]: { [WhereOp.ne]: value } };
+
+            if (op === '>=') return {
+                [WhereOp.and]: [
+                    { [name]: { [WhereOp.contains]: value } },
+                    { [name]: { [WhereOp.gt]: value } }
+                ]
+            };
+
+        }
+
+    }
+
+    // Plugin where
+    if (plugin) {
+        return plugin.parse(op_value);
+    }
+
+    return false;
+}
+
+const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], ignored: string[] } => {
+
+
+    let ignored: string[] = [];
+    let calculated: (WhereOptions | Keyword | null)[] = [];
+    let calculated_where: WhereOptions[] = [];
+
+    for (const token of tokens) {
+
+        // Subgroups are part of a pre-pass
+        if (Array.isArray(token)) {
+            const { where, ignored: sub_ignored } = parse_tokens(token);
+            calculated = [...calculated, ...where];
+            ignored = [...ignored, ...sub_ignored];
+            continue;
+        }
+
+        // Keywords are part of a second pass
+        if (Keywords.includes(token as Keyword)) {
+            calculated.push(token as Keyword);
+            continue;
+        }
+
+        const where = parse_where(token);
+        if (!where) ignored.push(token);
+        else calculated.push(where);
+    }
+
+    // Second pass
+    for (let i = 0; i < calculated.length; i++) {
+
+        const token = calculated[i];
+        let [a, b] = [calculated[i - 1], calculated[i + 1]];
+
+        if (Keywords.includes(token as Keyword)) {
+
+            if (!a || !b) throw `Missing parameters for keyword ${token}`;
+            calculated_where.push({
+                [keyword_op(token as Keyword)]: [
+                    a, b
+                ]
+            })
+
+            // Consume used tokens
+            calculated[i - 1] = null;
+            calculated[i + 1] = null;
+            calculated[i] = null;
+
+        } else {
+
+            if (a) {
+
+                // Not used in a keyword, so it's a standalone where
+                calculated_where = [
+                    ...calculated_where.slice(0, i - 1),
+                    a as WhereOptions,
+                    ...calculated_where.slice(i - 1)
+                ]
+
+                // Consume used token
+                calculated[i - 1] = null;
+
+            }
+
+        }
+
+
+    };
+
+    return { where: calculated_where, ignored };
+
+}
+
 export default async function ParseQuery(query: string, page: number = 0) {
 
-    const ignored: string[] = [];
+    const { where: parsed_where, ignored } = parse_tokens(tokenize(query));
 
-    const tokens: Array<{ key: string, value: string, op: Op, plugin?: QuerySegment, field?: RawField }> = tokenize(query)
-        .filter(t => {
-            // Ensure an operator is present
-            for (const op of Ops) if (t.includes(op)) return true;
-            ignored.push(t);
-            return false;
-        })
-        .map(t => {
-            // Fetch information
-            const op = Ops.find(op => t.includes(op)) as Op;
-            const [key, value] = t.split(op);
-            return { key, value, op };
-        })
-        .map(t => {
-            // Fetch field and plugin associations
-            const plugin = PluginManager.query_plugins.find(p => p.keys.includes(t.key) && p.ops.includes(t.op));
+    let where = { [WhereOp.and]: parsed_where }
 
-            let field = Manager.get_model_field(t.key);
-            if (field && !ensure_op(field?.type, t.op)) field = undefined;
+    const result_count = await (await Database.get()).models.Items.count({ where });
+    const results = await (await Database.get()).models.Items.findAll({ where, limit: 40, offset: page * 40, order: [['name', 'ASC']] });
 
-            return { ...t, field, plugin };
-        })
-        .filter(t => {
-            // Ensure a field or plugin is present
-            if (t.field || t.plugin) return true;
-            ignored.push(t.key + t.op + t.value);
-            return false;
-        });
-
-    const field_where: WhereOptions[] = tokens
-        .filter(t => t.field)
-        .map(t => {
-
-            if (!t.field) throw '?';
-            const name = t.field.mapped_name ?? t.field.name;
-            let value = fit_type(t.field, t.value);
-
-            if (t.field.type === 'string' || t.field.type === 'text') {
-                if (t.op === ':') return { [name]: { [WhereOp.iLike]: `%${value}%` } };
-                if (t.op === '=') return { [name]: value };
-            }
-
-            if (t.field.type === 'integer' || t.field.type === 'float') {
-                if (t.op === '=') return { [name]: value };
-                if (t.op === '>') return { [name]: { [WhereOp.gt]: value } };
-                if (t.op === '<') return { [name]: { [WhereOp.lt]: value } };
-                if (t.op === '>=') return { [name]: { [WhereOp.gte]: value } };
-                if (t.op === '<=') return { [name]: { [WhereOp.lte]: value } };
-                if (t.op === '!=') return { [name]: { [WhereOp.ne]: value } };
-            }
-
-            if (t.field.type === 'boolean') {
-                if (t.op === '=') return { [name]: value };
-                if (t.op === '!=') return { [name]: { [WhereOp.ne]: value } };
-            }
-
-            if (t.field.type === 'date') {
-                if (t.op === '=') return { [name]: value };
-                if (t.op === '>') return { [name]: { [WhereOp.gt]: value } };
-                if (t.op === '<') return { [name]: { [WhereOp.lt]: value } };
-                if (t.op === '>=') return { [name]: { [WhereOp.gte]: value } };
-                if (t.op === '<=') return { [name]: { [WhereOp.lte]: value } };
-            }
-
-            if (t.field.type.startsWith('list')) {
-                if (t.op === ':') return { [name]: { [WhereOp.contains]: value } };
-            }
-
-        }) as WhereOptions[];
-
-    const plugin_where: WhereOptions[] = tokens
-        .filter(t => t.plugin)
-        .map(t => t.plugin!.parse(t.value));
-
-    const where = { ...Object.assign({}, ...field_where), ...Object.assign({}, ...plugin_where) };
-    const results = await (await Database.get()).models.Items.findAll({ where: {[WhereOp.and]: where}, limit: 40, offset: page * 40 })
-    
-    return { ignored, results }
+    return { ignored, count: result_count, results };
 
 }

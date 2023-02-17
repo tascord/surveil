@@ -4,7 +4,7 @@
   "description": "A user friendly way to search through lots of things",
   "main": "index.js",
   "scripts": {
-    "dev": "tsc-watch --onSuccess \"node dist/index.js\""
+    "dev": "tsc-watch --onSuccess \"nodemon dist/index.js\""
   },
   "keywords": [],
   "author": "",

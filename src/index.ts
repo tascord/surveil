@@ -3,7 +3,6 @@ import { join } from "path";
 import DataMapper from "./classes/DataMapper";
 import ModelParser, { RawField } from "./classes/ModelParser";
 import server from "./server";
-import { config } from "dotenv";
 
 // Defaults
 export { default as DataMapper } from "./classes/DataMapper";
@@ -18,7 +17,7 @@ class Manager {
     private model_shape: RawField[];
 
     constructor() {
-        config();
+        console.clear();
         this.model_parser = new ModelParser([]);
 
         const mapper_location = join(process.cwd(), 'mapper.js');
@@ -31,16 +30,17 @@ class Manager {
         this.run(data);
     }
 
-    public run(exported: { data: Array<{ [key: string]: any }>, fields: RawField[], overwrite: boolean }) {
-        const { fields, data, overwrite } = exported;
+    public run(exported: { data: Array<{ [key: string]: any }>, fields: RawField[], overwrite: boolean, skip: boolean }) {
+
+        const { fields, data, overwrite, skip } = exported;
         this.model_parser = new ModelParser(data, overwrite);
-        this.model_parser.parse(fields);
+        this.model_parser.parse(fields, skip);
 
         server();
     }
 
     public get_model_field(name: string) {
-        return this.model_shape.find(field => field.mapped_name === name || (!field.mapped_name && field.name === name));
+        return this.model_shape.find(field => field.mapped_name === name || (!field.mapped_name && field.name === name) || field.alias?.includes(name));
     }
 
 }
