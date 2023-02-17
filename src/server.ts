@@ -19,6 +19,6 @@ export default async function (port: number) {
     app.use(router);
 
     const server = createServer(toNodeListener(app));
-    server.listen(port, () => console.log("• Server started on port 3000"));
+    server.listen(port, () => console.log("• Server started on port " + port));
 
 }
