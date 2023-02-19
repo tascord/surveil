@@ -4,7 +4,7 @@ import { RawField } from "./ModelParser";
 import PluginManager from "./PluginManager";
 import Database from "../database";
 
-const Ops = ['>', '<', '>=', '<=', '=', '!=', ':'] as const;
+const Ops = ['>', '<', '>=', '<=', '=', '!=', ':', '!:'] as const;
 export type Op = typeof Ops[number];
 
 const Keywords = ['and', 'or'] as const;
@@ -77,7 +77,7 @@ const ensure_op = (type: RawField['type'], op: Op) => {
     switch (type) {
         case 'string':
         case 'text':
-            return op === '=' || op === '!=' || op === ':' || op === '>';
+            return op === '=' || op === '!=' || op === ':' || op === '!:' || op === '>';
 
         case 'integer':
         case 'float':
@@ -114,7 +114,6 @@ const keyword_op = (keyword: Keyword) => {
     switch (keyword) {
         case 'and': return WhereOp.and;
         case 'or': return WhereOp.or;
-        // case 'not': return WhereOp.not;
     }
 }
 
@@ -164,6 +163,7 @@ const parse_where = (raw_token: string): false | WhereOptions => {
 
         if (field.type === 'string' || field.type === 'text') {
             if (op === ':') return { [name]: { [WhereOp.iLike]: `%${value}%` } };
+            if (op === '!:') return { [name]: { [WhereOp.notILike]: `%${value}%` } };
             if (op === '=') return { [name]: value };
         }
 
@@ -257,7 +257,7 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
             }
 
             // Extending previous keyword where
-            if(!real_a) calculated_where.pop();
+            if (!real_a) calculated_where.pop();
 
             calculated_where.push({
                 [keyword_op(token as Keyword)]: [a, b]
