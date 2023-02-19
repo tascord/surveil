@@ -123,28 +123,25 @@ const parse_where = (raw_token: string): false | WhereOptions => {
     if (!Ops.some(op => raw_token.includes(op))) return false;
 
     // Split tokens
-    let buffer = '';
-    let [op_key, op, valid, op_value] = ['', '' as Op, false, ''];
+    let [op_key, op, op_value] = ['', '' as Op, ''];
     for (let i = 0; i < raw_token.length; i++) {
         const char = raw_token[i];
 
-        if (Ops.includes(char as Op)) {
-            if (valid) {
-                op += char;
-                continue;
-            } else {
-                valid = true;
-                op_key = buffer;
-                op = char as Op;
+        if (Ops.some(op => op.startsWith(char))) {
+
+            let buffer = char;
+            while (Ops.some(op => op.startsWith(buffer))) {
+                buffer += raw_token[++i];
             }
-        } else {
-            if (!valid) buffer += char;
-            else {
-                op_value = raw_token.slice(op_key.length + op.length);
-            }
+
+            op = buffer.slice(0, -1) as Op;
+            op_key = raw_token.slice(0, i - op.length).trim();
+            op_value = raw_token.slice(i).trim();
         }
 
     }
+
+    if (!op) return false;
 
     // Fetch field and plugin associations
     const plugin = PluginManager.query_plugins.find(p => p.keys.includes(op_key) && p.ops.includes(op));
@@ -214,7 +211,6 @@ const parse_where = (raw_token: string): false | WhereOptions => {
 }
 
 const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], ignored: string[] } => {
-
 
     let ignored: string[] = [];
     let calculated: (WhereOptions | Keyword | null)[] = [];
