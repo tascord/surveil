@@ -7,7 +7,7 @@ import Database from "../database";
 const Ops = ['>', '<', '>=', '<=', '=', '!=', ':'] as const;
 export type Op = typeof Ops[number];
 
-const Keywords = ['and', 'or', 'not'] as const;
+const Keywords = ['and', 'or'] as const;
 export type Keyword = typeof Keywords[number];
 
 export interface QuerySegment {
@@ -15,7 +15,6 @@ export interface QuerySegment {
     ops: Op[];
     parse(segment: string): WhereOptions<any>;
 }
-
 
 const tokenize = (query: string) => {
     let buffer = '';
@@ -115,7 +114,7 @@ const keyword_op = (keyword: Keyword) => {
     switch (keyword) {
         case 'and': return WhereOp.and;
         case 'or': return WhereOp.or;
-        case 'not': return WhereOp.not;
+        // case 'not': return WhereOp.not;
     }
 }
 
@@ -246,16 +245,23 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
     for (let i = 0; i < calculated.length; i++) {
 
         const token = calculated[i];
-        let [a, b] = [calculated[i - 1], calculated[i + 1]];
+        let [a, b] = [calculated[i - 1] || calculated_where[calculated_where.length - 1], calculated[i + 1]];
+        const real_a = calculated[i - 1];
 
         if (Keywords.includes(token as Keyword)) {
 
-            if (!a || !b) throw `Missing parameters for keyword ${token}`;
+            if (!a || !b) {
+                ignored.push(token as string);
+                calculated[i] = null;
+                continue;
+            }
+
+            // Extending previous keyword where
+            if(!real_a) calculated_where.pop();
+
             calculated_where.push({
-                [keyword_op(token as Keyword)]: [
-                    a, b
-                ]
-            })
+                [keyword_op(token as Keyword)]: [a, b]
+            });
 
             // Consume used tokens
             calculated[i - 1] = null;
@@ -264,12 +270,12 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
 
         } else {
 
-            if (a) {
+            if (real_a) {
 
                 // Not used in a keyword, so it's a standalone where
                 calculated_where = [
                     ...calculated_where.slice(0, i - 1),
-                    a as WhereOptions,
+                    real_a as WhereOptions,
                     ...calculated_where.slice(i - 1)
                 ]
 
@@ -280,7 +286,6 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
 
         }
 
-
     };
 
     return { where: calculated_where, ignored };
@@ -289,13 +294,17 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
 
 export default async function ParseQuery(query: string, page: number = 0) {
 
-    const { where: parsed_where, ignored } = parse_tokens(tokenize(query));
+    try {
+        const { where: parsed_where, ignored } = parse_tokens(tokenize(query));
 
-    let where = { [WhereOp.and]: parsed_where }
+        let where = { [WhereOp.and]: parsed_where }
 
-    const result_count = await (await Database.get()).models.Items.count({ where });
-    const results = await (await Database.get()).models.Items.findAll({ where, limit: 40, offset: page * 40, order: [['name', 'ASC']] });
+        const result_count = await (await Database.get()).models.Items.count({ where });
+        const results = await (await Database.get()).models.Items.findAll({ where, limit: 40, offset: page * 40, order: [['name', 'ASC']] });
 
-    return { ignored, count: result_count, results };
+        return { ignored, count: result_count, results };
+    } catch (err) {
+        return { error: err }
+    }
 
 }
