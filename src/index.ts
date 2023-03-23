@@ -1,3 +1,5 @@
+// console.clear();
+
 import { existsSync } from "fs";
 import { join } from "path";
 import DataMapper from "./classes/DataMapper";
@@ -17,7 +19,7 @@ class Manager {
     private model_shape: RawField[];
 
     constructor() {
-        console.clear();
+        // console.clear();
         this.model_parser = new ModelParser([]);
 
         const mapper_location = join(process.cwd(), 'mapper.js');

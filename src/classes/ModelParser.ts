@@ -13,6 +13,7 @@ export type RawField = {
     allow_null?: boolean;
     unique?: boolean;
     alias?: string[];
+    hidden?: boolean;
 }
 
 const map_type = (type: FieldType): DataTypes.AbstractDataTypeConstructor | DataTypes.ArrayDataType<any> => {
@@ -98,7 +99,6 @@ export default class ModelParser {
                 const exists = await Item.findByPk(item.id, { transaction });
 
                 if (!this.overwrite && exists) {
-
                     count++;
 
                     if (skipped === 0) console.log(`• Skipping item #${count} (id: ${item.id})`);
@@ -112,10 +112,8 @@ export default class ModelParser {
                     skipped++;
                     continue;
                 } else if (skipped > 0) {
-
                     skipped = 0;
                     process.stdout.write('\n');
-
                 }
 
                 // Parse item

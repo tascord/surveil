@@ -31,4 +31,4 @@ class PluginQuerySegment {
 
 }
 
-export const CreateQueryPlugin = () => new PluginQuerySegment;
+export const CreateQueryPlugin = () => new PluginQuerySegment();

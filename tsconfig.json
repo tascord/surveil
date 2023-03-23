@@ -11,7 +11,7 @@
 		"pretty": true,
 		"rootDir": "src",
 		"outDir": "dist",
-		"target": "es6",
+		"target": "es2021",
 		"module": "commonjs",
 		"resolveJsonModule": true,
 		"skipLibCheck": true,

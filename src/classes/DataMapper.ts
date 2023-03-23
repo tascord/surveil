@@ -29,7 +29,8 @@ export default class DataMapper {
             parser?: RawField['parser'],
             allow_null?: RawField['allow_null'],
             unique?: RawField['unique'],
-            alias?: RawField['alias']
+            alias?: RawField['alias'],
+            hidden?: RawField['hidden']
         } = {}
     ) {
 
@@ -38,7 +39,8 @@ export default class DataMapper {
             parser,
             allow_null,
             unique,
-            alias
+            alias,
+            hidden
         } = options;
 
         this._fields.push({
@@ -48,7 +50,8 @@ export default class DataMapper {
             parser,
             allow_null,
             unique,
-            alias
+            alias,
+            hidden
         });
 
         return this;
@@ -86,7 +89,7 @@ export default class DataMapper {
             overwrite: this._overwrite,
             skip: this._skip,
             fields: this._fields,
-            port: this._port
+            port: this._port,
         };
     }
 

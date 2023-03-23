@@ -98,13 +98,33 @@ const ensure_op = (type: RawField['type'], op: Op) => {
 const fit_type = (field: RawField, initial: string) => {
 
     let value: any = initial;
-    if (field.type === 'date') value = new Date(value) || Date.now();
-    if (field.type === 'boolean') value = value === 'true' || value === '1';
-    if (field.type === 'integer') value = parseInt(value);
-    if (field.type === 'float') value = parseFloat(value);
 
-    if (field.type.startsWith('list')) {
-        value = value.split(',').map((v: string) => fit_type({ ...field, type: field.type.split('-')[1] as RawField['type'] }, v));
+    switch (field.type) {
+        case 'string':
+        case 'text':
+            value = String(value);
+            break;
+        case 'date':
+            value = new Date(value) || Date.now();
+            if (isNaN(value.getTime())) throw new Error(`Invalid date ${initial} for field ${field.mapped_name || field.name}`);
+            break;
+        case 'boolean':
+            value = value === 'true' || value === '1';
+            break;
+        case 'integer':
+            value = parseInt(value);
+            if (isNaN(value)) throw new Error(`Invalid number ${initial} for field ${field.mapped_name || field.name}`)
+            break;
+        case 'float':
+            value = parseFloat(value);
+            if (isNaN(value)) throw new Error(`Invalid number ${initial} for field ${field.mapped_name || field.name}`)
+            break;
+        default:
+            if (field.type.startsWith('list')) {
+                value = value.split(',').map((v: string) => fit_type({ ...field, type: field.type.split('-')[1] as RawField['type'] }, v));
+            } else {
+                throw new Error(`[Server Error] Unexpected type ${field.type} for field ${field.mapped_name || field.name}`)
+            }
     }
 
     return value;
@@ -117,10 +137,10 @@ const keyword_op = (keyword: Keyword) => {
     }
 }
 
-const parse_where = (raw_token: string): false | WhereOptions => {
+const parse_where = (raw_token: string): string | WhereOptions => {
 
     // Ensure an operator is present
-    if (!Ops.some(op => raw_token.includes(op))) return false;
+    if (!Ops.some(op => raw_token.includes(op))) return 'Not sure what to do with this';
 
     // Split tokens
     let [op_key, op, op_value] = ['', '' as Op, ''];
@@ -141,7 +161,7 @@ const parse_where = (raw_token: string): false | WhereOptions => {
 
     }
 
-    if (!op) return false;
+    if (!op) return 'Not sure what to do with this';
 
     // Fetch field and plugin associations
     const plugin = PluginManager.query_plugins.find(p => p.keys.includes(op_key) && p.ops.includes(op));
@@ -149,14 +169,18 @@ const parse_where = (raw_token: string): false | WhereOptions => {
     let field = Manager.get_model_field(op_key);
     if (field && !ensure_op(field?.type, op)) field = undefined;
 
+    if (field?.hidden) field = undefined;
+
     // Ensure a field or plugin is present
-    if (!field && !plugin) return false;
+    if (!field && !plugin) return 'Nothing to do with this';
 
     // Field where
     if (field) {
 
         const name = field.mapped_name ?? field.name;
-        let value = fit_type(field, op_value);
+
+        let value;
+        try { value = fit_type(field, op_value); } catch (e) { return (e as Error).message; }
 
         if (field.type === 'string' || field.type === 'text') {
             if (op === ':') return { [name]: { [WhereOp.iLike]: `%${value}%` } };
@@ -207,12 +231,12 @@ const parse_where = (raw_token: string): false | WhereOptions => {
         return plugin.parse(op_value);
     }
 
-    return false;
+    return 'Nothing to do with this';
 }
 
-const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], ignored: string[] } => {
+const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], ignored: { [key: string]: string } } => {
 
-    let ignored: string[] = [];
+    let ignored: { [key: string]: string } = {};
     let calculated: (WhereOptions | Keyword | null)[] = [];
     let calculated_where: WhereOptions[] = [];
 
@@ -222,7 +246,7 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
         if (Array.isArray(token)) {
             const { where, ignored: sub_ignored } = parse_tokens(token);
             calculated = [...calculated, ...where];
-            ignored = [...ignored, ...sub_ignored];
+            ignored = { ...ignored, ...sub_ignored };
             continue;
         }
 
@@ -233,12 +257,12 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
         }
 
         const where = parse_where(token);
-        if (!where) ignored.push(token);
+        if (typeof where === 'string') ignored[token] = where;
         else calculated.push(where);
     }
 
     // Second pass
-    for (let i = 0; i < calculated.length; i++) {
+    for (let i = 0; i < calculated.length + 1; i++) {
 
         const token = calculated[i];
         let [a, b] = [calculated[i - 1] || calculated_where[calculated_where.length - 1], calculated[i + 1]];
@@ -247,7 +271,7 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
         if (Keywords.includes(token as Keyword)) {
 
             if (!a || !b) {
-                ignored.push(token as string);
+                ignored[token as string] = 'Missing arguments';
                 calculated[i] = null;
                 continue;
             }

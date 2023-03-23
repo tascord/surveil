@@ -1,4 +1,5 @@
 import { readdirSync, statSync } from "fs";
+import { resolve } from "path";
 import { DataMappingStrategy } from "./DataMapper";
 import { QuerySegment } from "./QueryParser";
 
@@ -15,16 +16,15 @@ class PluginManager {
     constructor() {
         this.query_plugins = [];
         this.data_plugins = [];
-
         this.locate();
     }
 
     private locate() {
-
         const dir = readdirSync('./');
         if (!dir.includes('plugins')) return;
 
         const plugins = readdirSync('./plugins');
+        console.log('• Loading plugins')
         for (const subfolder of plugins) {
 
             if (FolderMap[subfolder] === undefined) continue;
@@ -33,13 +33,13 @@ class PluginManager {
             const files = readdirSync(`./plugins/${subfolder}`).filter(file => file.endsWith('.js'));
             for (const file of files) {
                 try {
-                    const plugin = require(`../plugins/${subfolder}/${file}`);                    
+                    const plugin = require(resolve(`./plugins/${subfolder}/${file}`));
                     this[FolderMap[subfolder] as keyof PluginManager].push(plugin.default);
                     console.log(`• Loaded plugin: ${plugin.name}.`);
 
                 } catch (err) {
-                    console.log(`Unable to load plugin: ${file}.\n`);
-                    console.log(err); 
+                    console.log(`• Unable to load plugin: ${subfolder}/${file}`);
+                    console.log('\t' + (err as Error).message);
                 }
             }
 

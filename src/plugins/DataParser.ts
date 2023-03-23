@@ -24,4 +24,4 @@ class PluginDataMappingStrategy {
 
 }
 
-export const CreateDataMapper = () => new PluginDataMappingStrategy;
+export const CreateDataMapper = () => new PluginDataMappingStrategy();
