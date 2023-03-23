@@ -4,7 +4,7 @@ import { RawField } from "./ModelParser";
 import PluginManager from "./PluginManager";
 import Database from "../database";
 
-const Ops = ['>', '<', '>=', '<=', '=', '!=', ':', '!:'] as const;
+const Ops = ['>', '<', '>=', '<=', '=', '!=', ':', '!:', '/', '!/'] as const;
 export type Op = typeof Ops[number];
 
 const Keywords = ['and', 'or'] as const;
@@ -77,7 +77,7 @@ const ensure_op = (type: RawField['type'], op: Op) => {
     switch (type) {
         case 'string':
         case 'text':
-            return op === '=' || op === '!=' || op === ':' || op === '!:' || op === '>';
+            return op === '=' || op === '!=' || op === ':' || op === '!:' || op === '>' || op === '/' || op === '!/';
 
         case 'integer':
         case 'float':
@@ -186,6 +186,8 @@ const parse_where = (raw_token: string): string | WhereOptions => {
             if (op === ':') return { [name]: { [WhereOp.iLike]: `%${value}%` } };
             if (op === '!:') return { [name]: { [WhereOp.notILike]: `%${value}%` } };
             if (op === '=') return { [name]: value };
+            if (op === '/') return { [name]: { [WhereOp.regexp]: value } };
+            if (op === '!/') return { [name]: { [WhereOp.notRegexp]: value } };
         }
 
         if (field.type === 'integer' || field.type === 'float') {
