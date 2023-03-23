@@ -91,6 +91,10 @@ program.command('init')
                 task: () => void execSync(`git sparse-checkout set example/`, { cwd: wd })
             },
             {
+                title: 'Read tree',
+                task: () => void execSync(`git read-tree -mu HEAD`, { cwd: wd })
+            },
+            {
                 title: 'Install dependencies',
                 task: () => void execSync(install('surveiltg'), { cwd: wd })
             }
@@ -109,5 +113,8 @@ program.command('init')
 
     })
 
+program.command('run')
+    .description('Run surveil application')
+    .action(() => require('./index'));
 
 program.parse();
