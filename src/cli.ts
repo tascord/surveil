@@ -107,8 +107,6 @@ program.command('init')
             .then(() => console.log(`\n• [Surveil] Setup complete!`))
             .catch(fail);
 
-        console.log(given_path);
-
     })
 
 
