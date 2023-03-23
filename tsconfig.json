@@ -15,5 +15,6 @@
 		"module": "commonjs",
 		"resolveJsonModule": true,
 		"skipLibCheck": true,
+		"esModuleInterop": true
 	}
 }

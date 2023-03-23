@@ -1,8 +1,6 @@
-dist/
-plugins/
+/dist/
+/plugins/
 node_modules/
-mapper.js
-.env
-*.json
-
-!/src/plugins
+/mapper.js
+/.env
+/*.json

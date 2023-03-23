@@ -1,0 +1,12 @@
+{
+  "name": "surveil-example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "mapper.js",
+  "scripts": {
+    "dev": "npx surveil run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
