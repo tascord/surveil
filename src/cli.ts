@@ -79,23 +79,23 @@ program.command('init')
         let tasks: Listr.ListrTask[] = [
             {
                 title: 'Clone surveil repository',
-                task: () => void execSync(`git clone --no-checkout ${package_info.repository.url} ${wd}`)
+                task: () => void execSync(`git clone --no-checkout ${package_info.repository.url} ${wd}`, { stdio: 'ignore' })
             },
             {
                 title: 'Setup repository sparsely',
-                task: () => void execSync(`git sparse-checkout init --cone`, { cwd: wd })
+                task: () => void execSync(`git sparse-checkout init --cone`, { cwd: wd, stdio: 'ignore' })
             },
             {
                 title: 'Add example files to sparse checkout',
-                task: () => void execSync(`git sparse-checkout set example/`, { cwd: wd })
+                task: () => void execSync(`git sparse-checkout set example/`, { cwd: wd, stdio: 'ignore' })
             },
             {
                 title: 'Read tree',
-                task: () => void execSync(`git read-tree -mu HEAD`, { cwd: wd })
+                task: () => void execSync(`git read-tree -mu HEAD`, { cwd: wd, stdio: 'ignore' })
             },
             {
                 title: 'Install dependencies',
-                task: () => void execSync(install('surveiltg'), { cwd: wd })
+                task: () => void execSync(install('surveiltg'), { cwd: wd, stdio: 'ignore' })
             }
         ];
 
