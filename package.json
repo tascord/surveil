@@ -1,6 +1,6 @@
 {
 	"name": "surveiltg",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "A user friendly way to search through lots of things",
 	"main": "index.js",
 	"scripts": {

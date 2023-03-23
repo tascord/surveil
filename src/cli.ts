@@ -75,7 +75,6 @@ program.command('init')
 
         const in_cwd = given_path === '.';
         const wd = in_cwd ? process.cwd() : resolve(given_path);
-        if (!existsSync(wd)) return fail(`Path '${given_path}' does not exist`, true);
 
         let tasks: Listr.ListrTask[] = [
             {
