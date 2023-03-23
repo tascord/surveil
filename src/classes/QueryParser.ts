@@ -13,7 +13,7 @@ export type Keyword = typeof Keywords[number];
 export interface QuerySegment {
     keys: string[];
     ops: Op[];
-    parse(segment: string): WhereOptions<any>;
+    parse(segment: string, op: Op): WhereOptions<any>;
 }
 
 const tokenize = (query: string) => {
@@ -228,7 +228,7 @@ const parse_where = (raw_token: string): string | WhereOptions => {
 
     // Plugin where
     if (plugin) {
-        return plugin.parse(op_value);
+        return plugin.parse(op_value, op);
     }
 
     return 'Nothing to do with this';
@@ -324,7 +324,10 @@ export default async function ParseQuery(query: string, page: number = 0) {
 
         return { ignored, count: result_count, results };
     } catch (err) {
-        return { error: err }
+        console.log(`• Error parsing query: ${query}`)
+        console.log(`\t${(err as Error).message}`);
+        console.log((err as Error).stack?.split('\n').map(l => `\t${l}`).join('\n'))
+        return { error: String(err) }
     }
 
 }

@@ -34,8 +34,11 @@ class PluginManager {
             for (const file of files) {
                 try {
                     const plugin = require(resolve(`./plugins/${subfolder}/${file}`));
-                    this[FolderMap[subfolder] as keyof PluginManager].push(plugin.default);
-                    console.log(`• Loaded plugin: ${plugin.name}.`);
+                    if (!plugin) throw new Error('Invalid plugin');
+                    if (!plugin.export || typeof plugin.export !== 'function') throw new Error('Invalid plugin export');
+
+                    this[FolderMap[subfolder] as keyof PluginManager].push(plugin.export());
+                    console.log(`• Loaded plugin: ${subfolder}/${file}.`);
 
                 } catch (err) {
                     console.log(`• Unable to load plugin: ${subfolder}/${file}`);

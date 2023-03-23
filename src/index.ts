@@ -1,4 +1,4 @@
-// console.clear();
+console.clear();
 
 import { existsSync } from "fs";
 import { join } from "path";
@@ -9,17 +9,12 @@ import server from "./server";
 // Defaults
 export { default as DataMapper } from "./classes/DataMapper";
 
-// Plugins
-export { CreateQueryPlugin } from "./plugins/QuerySegment";
-export { CreateDataMapper } from "./plugins/DataParser";
-
 class Manager {
 
     private model_parser: ModelParser;
     private model_shape: RawField[];
 
     constructor() {
-        // console.clear();
         this.model_parser = new ModelParser([]);
 
         const mapper_location = join(process.cwd(), 'mapper.js');

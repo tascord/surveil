@@ -1,6 +1,6 @@
-const { CreateQueryPlugin } = require('surveil');
+const { CreateQueryPlugin } = require('surveil/plugins');
 
-module.exports = new CreateQueryPlugin()
+module.exports = CreateQueryPlugin()
     .keys(['query keys'])
     .ops(['query operators'])
     .parse(segment => {
