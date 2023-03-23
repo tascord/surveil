@@ -92,7 +92,7 @@ program.command('init')
             },
             {
                 title: 'Install dependencies',
-                task: () => void execSync(install('surveil'), { cwd: wd })
+                task: () => void execSync(install('surveiltg'), { cwd: wd })
             }
         ];
 
