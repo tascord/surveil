@@ -2,7 +2,7 @@ import { DataTypes, ModelAttributes } from "sequelize";
 import Database from "../database";
 
 type GenericFieldType = 'integer' | 'float' | 'string' | 'boolean' | 'date' | 'text' | 'json';
-type FieldType = GenericFieldType | `list-${GenericFieldType}`;
+export type FieldType = GenericFieldType | `list-${GenericFieldType}`;
 type FieldParser = (value: string) => any;
 
 export type RawField = {

@@ -33,7 +33,7 @@ class Manager {
         this.model_parser = new ModelParser(data, overwrite);
         this.model_parser.parse(fields, skip);
 
-        server(port);
+        server(port, fields);
     }
 
     public get_model_field(name: string) {
