@@ -4,7 +4,7 @@
   "description": "",
   "main": "mapper.js",
   "scripts": {
-    "dev": "npx surveil run"
+    "start": "npx surveil run"
   },
   "keywords": [],
   "author": "",
