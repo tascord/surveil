@@ -1,8 +1,15 @@
 {
 	"name": "surveiltg",
-	"version": "1.0.5",
+	"version": "1.0.8",
 	"description": "A user friendly way to search through lots of things",
-	"main": "index.js",
+	"main": "./dist/index.js",
+	"directories": {
+		"lib": "dist/"
+	},
+	"exports": {
+		".": "./dist/index.js",
+		"./*": "./dist/*"
+	},
 	"scripts": {
 		"dev": "tsc-watch --onSuccess \"nodemon dist/index.js\""
 	},
@@ -21,8 +28,8 @@
 	"dependencies": {
 		"commander": "^10.0.0",
 		"dotenv": "^16.0.3",
-		"listr": "^0.14.3",
 		"h3": "^1.4.0",
+		"listr": "^0.14.3",
 		"pg": "^8.9.0",
 		"sequelize": "^6.28.0"
 	},
