@@ -1,4 +1,4 @@
-import { WhereOptions, Op as WhereOp } from "sequelize";
+import { WhereOptions, Op as WhereOp, where } from "sequelize";
 import Manager from '../';
 import { RawField } from "./ModelParser";
 import PluginManager from "./PluginManager";
@@ -52,18 +52,19 @@ const tokenize = (query: string) => {
         }
 
         // Quotations
-        if (char === '"') {
+        if (char === '"' && query[i - 1] !== '\\') {
             in_string = !in_string;
             continue;
         }
 
-        if (char === ' ' && !in_string) {
+        if (char === ' ' && !in_string && query[i - 1] !== '\\') {
             if (buffer.length > 0) {
                 tokens.push(buffer);
                 buffer = '';
             }
             continue;
         }
+
         buffer += char;
     }
 
@@ -90,7 +91,7 @@ const ensure_op = (type: RawField['type'], op: Op) => {
             return op === '=' || op === '!=' || op === '>' || op === '<' || op === '>=' || op === '<=';
 
         default:
-            if (type.startsWith('list')) return op === ':' || op === '>=' || op === '=' || op === '!=';
+            if (type.startsWith('list')) return op === ':' || op === '>=' || op === '=' || op === '!=' || op === '!:';
             return false;
     }
 }
@@ -185,7 +186,7 @@ const parse_where = (raw_token: string): string | WhereOptions => {
         if (field.type === 'string' || field.type === 'text') {
             if (op === ':') return { [name]: { [WhereOp.iLike]: `%${value}%` } };
             if (op === '!:') return { [name]: { [WhereOp.notILike]: `%${value}%` } };
-            if (op === '=') return { [name]: value };
+            if (op === '=') return { [name]: { [WhereOp.iLike]: value } };
             if (op === '/') return { [name]: { [WhereOp.regexp]: value } };
             if (op === '!/') return { [name]: { [WhereOp.notRegexp]: value } };
         }
@@ -214,8 +215,13 @@ const parse_where = (raw_token: string): string | WhereOptions => {
 
         if (field.type.startsWith('list')) {
             if (op === ':') return { [name]: { [WhereOp.contains]: value } };
-            if (op === '=') return { [name]: { [WhereOp.eq]: value } };
+            if (op === '=') return { [name]: { [WhereOp.iLike]: value } };
             if (op === '!=') return { [name]: { [WhereOp.ne]: value } };
+            if(op === '!:') return ({
+                [WhereOp.not]: {
+                    [name]: { [WhereOp.contains]: value }
+                }
+            })
 
             if (op === '>=') return {
                 [WhereOp.and]: [

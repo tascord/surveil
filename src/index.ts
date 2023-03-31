@@ -2,8 +2,9 @@ console.clear();
 
 import { existsSync } from "fs";
 import { join } from "path";
-import DataMapper from "./classes/DataMapper";
+import DataMapper, { Extension } from "./classes/DataMapper";
 import ModelParser, { RawField } from "./classes/ModelParser";
+import Database from "./database";
 import server from "./server";
 
 // Defaults
@@ -27,13 +28,17 @@ class Manager {
         this.run(data);
     }
 
-    public run(exported: { data: Array<{ [key: string]: any }>, fields: RawField[], overwrite: boolean, skip: boolean, port: number }) {
+    public run(exported: { data: Array<{ [key: string]: any }>, fields: RawField[], overwrite: boolean, skip: boolean, port: number, extensions: Extension[] }) {
 
         const { fields, data, overwrite, skip, port } = exported;
         this.model_parser = new ModelParser(data, overwrite);
         this.model_parser.parse(fields, skip);
 
-        server(port, fields);
+        server(port, fields).then(([app, router]) => {
+            for (const extension of exported.extensions) {
+                extension(() => Database.get(), router, app);
+            }
+        });
     }
 
     public get_model_field(name: string) {

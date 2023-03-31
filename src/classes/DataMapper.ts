@@ -1,11 +1,15 @@
 import { readFileSync } from "fs";
 import { RawField } from "./ModelParser";
 import PluginManager from "./PluginManager";
+import { Sequelize } from 'sequelize';
+import { App, Router } from "h3";
 
 export interface DataMappingStrategy {
     type: string;
     parse(data: Buffer): Array<{ [key: string]: any }>;
 }
+
+export type Extension = (database: () => Promise<Sequelize>, router: Router, app: App) => void;
 
 export default class DataMapper {
 
@@ -15,6 +19,7 @@ export default class DataMapper {
     private _overwrite = false;
     private _skip = false;
     private _port = 3000;
+    private _extensions: Extension[] = [];
 
     constructor(file_location: string, strategy: 'json' | string) {
         this._file_location = file_location;
@@ -72,6 +77,11 @@ export default class DataMapper {
         return this;
     }
 
+    public extend(extension: Extension) {
+        this._extensions.push(extension);
+        return this;
+    }
+
     public export() {
 
         const buffer = readFileSync(this._file_location);
@@ -90,6 +100,7 @@ export default class DataMapper {
             skip: this._skip,
             fields: this._fields,
             port: this._port,
+            extensions: this._extensions
         };
     }
 
