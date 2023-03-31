@@ -1,4 +1,4 @@
-const { CreateQueryPlugin } = require('surveil/plugins');
+const { CreateQueryPlugin } = require('surveiltg/plugins');
 
 module.exports = CreateQueryPlugin()
     .keys(['query keys'])
