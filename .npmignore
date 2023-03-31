@@ -1,8 +1,0 @@
-/src/
-/plugins/
-example/
-/.env
-/.gitignore
-/*.json
-/*.md
-/mapper.js
