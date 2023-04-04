@@ -83,7 +83,7 @@ program.command('init')
             },
             {
                 title: 'Install dependencies',
-                task: () => void execSync(install('surveiltg'), { cwd: wd, stdio: 'ignore' })
+                task: () => void execSync(install('surveiltg@latest'), { cwd: wd, stdio: 'ignore' })
             }
         ];
 

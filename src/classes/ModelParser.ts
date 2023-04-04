@@ -12,7 +12,7 @@ export type RawField = {
     parser?: FieldParser;
     allow_null?: boolean;
     unique?: boolean;
-    alias?: string[];
+    alias?: string[]|string;
     hidden?: boolean;
 }
 

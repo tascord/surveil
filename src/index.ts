@@ -42,7 +42,12 @@ class Manager {
     }
 
     public get_model_field(name: string) {
-        return this.model_shape.find(field => field.mapped_name === name || (!field.mapped_name && field.name === name) || field.alias?.includes(name));
+        name = name.toLowerCase();
+        return this.model_shape.find(field => field.mapped_name?.toLowerCase() === name || (!field.mapped_name && field.name.toLowerCase() === name) || (
+            field.alias && (
+                Array.isArray(field.alias) ? field.alias.some(alias => alias.toLowerCase() === name) : field.alias?.toLowerCase() === name
+            )
+        ));
     }
 
 }

@@ -24,7 +24,7 @@ const OpMap: Array<[FieldType[], Op[]]> = [
 type ComputedModelField = {
     name: string,
     ops: Op[],
-    alias: string[]
+    alias: string[]|string
 }
 
 export default async function (port: number, fields: RawField[]) {
