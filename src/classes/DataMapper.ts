@@ -1,11 +1,12 @@
-import { readFileSync } from "fs";
-import { RawField } from "./ModelParser";
+import {readFileSync} from "fs";
+import {RawField} from "./ModelParser";
 import PluginManager from "./PluginManager";
-import { Sequelize } from 'sequelize';
-import { App, Router } from "h3";
+import {Sequelize} from 'sequelize';
+import {App, Router} from "h3";
 
 export interface DataMappingStrategy {
     type: string;
+
     parse(data: Buffer): Array<{ [key: string]: any }>;
 }
 
@@ -16,6 +17,7 @@ export default class DataMapper {
     private readonly _file_location: string;
     private readonly _strategy: 'json' | string;
     private _fields: RawField[] = [];
+    private _default_field: string | undefined = undefined;
     private _overwrite = false;
     private _skip = false;
     private _port = 3000;
@@ -82,6 +84,11 @@ export default class DataMapper {
         return this;
     }
 
+    public default_field(value: string) {
+        this._default_field = value;
+        return this;
+    }
+
     public export() {
 
         const buffer = readFileSync(this._file_location);
@@ -100,7 +107,8 @@ export default class DataMapper {
             skip: this._skip,
             fields: this._fields,
             port: this._port,
-            extensions: this._extensions
+            extensions: this._extensions,
+            default_field: this._default_field
         };
     }
 

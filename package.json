@@ -1,4 +1,4 @@
-{
+	{
 	"name": "surveiltg",
 	"version": "1.0.12",
 	"description": "A user friendly way to search through lots of things",
@@ -27,11 +27,13 @@
 	"dependencies": {
 		"commander": "^10.0.0",
 		"dotenv": "^16.0.3",
+		"enquirer": "^2.3.6",
+		"event-stream": "^4.0.1",
 		"h3": "^1.4.0",
 		"listr": "^0.14.3",
+		"ndjson": "^2.0.0",
 		"pg": "^8.9.0",
-		"sequelize": "^6.28.0",
-		"enquirer": "^2.3.6"
+		"sequelize": "^6.28.0"
 	},
 	"repository": {
 		"type": "git",

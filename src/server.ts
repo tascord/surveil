@@ -27,6 +27,12 @@ type ComputedModelField = {
     alias: string[]|string
 }
 
+const CleanField = (field: RawField) => ({
+    name: field.mapped_name || field.name,
+    ops: OpMap.find(([types]) => types.includes(field.type))?.[1] || [],
+    alias: field.alias || []
+})
+
 export default async function (port: number, fields: RawField[]) {
     return new Promise<[App, Router]>(resolve => {
         const app = createApp();
@@ -44,16 +50,12 @@ export default async function (port: number, fields: RawField[]) {
             if (Array.isArray(page_query)) page_query = page_query[0];
 
             let page = parseInt(page_query || '') || 0;
-            return ParseQuery((await readBody(event)).trim(), page);
+            return ParseQuery((await readBody(event))?.trim()||'', page);
 
         }));
 
         router.get('/model', eventHandler(() => {
-            const computed_fields: ComputedModelField[] = fields.filter(f => !f.hidden).map(f => ({
-                name: f.mapped_name || f.name,
-                ops: OpMap.find(([types]) => types.includes(f.type))?.[1] || [],
-                alias: f.alias || []
-            }));
+            const computed_fields = fields.filter(f => !f.hidden).map(CleanField) ;
 
             for (const plugin of PluginManager.query_plugins) {
                 computed_fields.push({

@@ -31,7 +31,7 @@ const map_type = (type: FieldType): DataTypes.AbstractDataTypeConstructor | Data
         case 'text':
             return DataTypes.TEXT;
         case 'json':
-            return DataTypes.JSON;
+            return DataTypes.JSONB;
         default:
             if (type.startsWith('list-')) {
                 const list_type = type.split('-')[1] as GenericFieldType;

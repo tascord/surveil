@@ -1,6 +1,6 @@
-import { WhereOptions, Op as WhereOp, where } from "sequelize";
+import {WhereOptions, Op as WhereOp, where} from "sequelize";
 import Manager from '../';
-import { RawField } from "./ModelParser";
+import {RawField} from "./ModelParser";
 import PluginManager from "./PluginManager";
 import Database from "../database";
 
@@ -13,6 +13,7 @@ export type Keyword = typeof Keywords[number];
 export interface QuerySegment {
     keys: string[];
     ops: Op[];
+
     parse(segment: string, op: Op): WhereOptions<any>;
 }
 
@@ -41,7 +42,8 @@ const tokenize = (query: string) => {
                 if (balance === 0) {
                     i = j;
                     break;
-                };
+                }
+                ;
 
                 if (!query[j]) throw 'Unbalanced parentheses';
                 slice_buffer += query[j];
@@ -122,7 +124,10 @@ const fit_type = (field: RawField, initial: string) => {
             break;
         default:
             if (field.type.startsWith('list')) {
-                value = value.split(',').map((v: string) => fit_type({ ...field, type: field.type.split('-')[1] as RawField['type'] }, v));
+                value = value.split(',').map((v: string) => fit_type({
+                    ...field,
+                    type: field.type.split('-')[1] as RawField['type']
+                }, v));
             } else {
                 throw new Error(`[Server Error] Unexpected type ${field.type} for field ${field.mapped_name || field.name}`)
             }
@@ -133,33 +138,44 @@ const fit_type = (field: RawField, initial: string) => {
 
 const keyword_op = (keyword: Keyword) => {
     switch (keyword) {
-        case 'and': return WhereOp.and;
-        case 'or': return WhereOp.or;
+        case 'and':
+            return WhereOp.and;
+        case 'or':
+            return WhereOp.or;
     }
 }
 
 const parse_where = (raw_token: string): string | WhereOptions => {
 
-    // Ensure an operator is present
-    if (!Ops.some(op => raw_token.includes(op))) return 'Not sure what to do with this';
-
-    // Split tokens
+    const missing_op = !Ops.some(op => raw_token.includes(op));
+    let field: RawField | undefined;
     let [op_key, op, op_value] = ['', '' as Op, ''];
-    for (let i = 0; i < raw_token.length; i++) {
-        const char = raw_token[i];
 
-        if (Ops.some(op => op.startsWith(char))) {
+    if (missing_op && Manager.default_field) {
+        op = ':';
+        op_value = raw_token;
+        field = Manager.default_field;
+    } else {
+        // Ensure an operator is present
+        if (missing_op) return 'Not sure what to do with this';
 
-            let buffer = char;
-            while (Ops.some(op => op.startsWith(buffer))) {
-                buffer += raw_token[++i];
+        // Split tokens
+        for (let i = 0; i < raw_token.length; i++) {
+            const char = raw_token[i];
+
+            if (Ops.some(op => op.startsWith(char))) {
+
+                let buffer = char;
+                while (Ops.some(op => op.startsWith(buffer))) {
+                    buffer += raw_token[++i];
+                }
+
+                op = buffer.slice(0, -1) as Op;
+                op_key = raw_token.slice(0, i - op.length).trim();
+                op_value = raw_token.slice(i).trim();
             }
 
-            op = buffer.slice(0, -1) as Op;
-            op_key = raw_token.slice(0, i - op.length).trim();
-            op_value = raw_token.slice(i).trim();
         }
-
     }
 
     if (!op) return 'Not sure what to do with this';
@@ -167,10 +183,11 @@ const parse_where = (raw_token: string): string | WhereOptions => {
     // Fetch field and plugin associations
     const plugin = PluginManager.query_plugins.find(p => p.keys.includes(op_key) && p.ops.includes(op));
 
-    let field = Manager.get_model_field(op_key);
-    if (field && !ensure_op(field?.type, op)) field = undefined;
-
-    if (field?.hidden) field = undefined;
+    if (!field) {
+        field = Manager.get_model_field(op_key);
+        if (field && !ensure_op(field?.type, op)) field = undefined;
+        if (field?.hidden) field = undefined;
+    }
 
     // Ensure a field or plugin is present
     if (!field && !plugin) return 'Nothing to do with this';
@@ -181,52 +198,56 @@ const parse_where = (raw_token: string): string | WhereOptions => {
         const name = field.mapped_name ?? field.name;
 
         let value;
-        try { value = fit_type(field, op_value); } catch (e) { return (e as Error).message; }
+        try {
+            value = fit_type(field, op_value);
+        } catch (e) {
+            return (e as Error).message;
+        }
 
         if (field.type === 'string' || field.type === 'text') {
-            if (op === ':') return { [name]: { [WhereOp.iLike]: `%${value}%` } };
-            if (op === '!:') return { [name]: { [WhereOp.notILike]: `%${value}%` } };
-            if (op === '=') return { [name]: { [WhereOp.iLike]: value } };
-            if (op === '/') return { [name]: { [WhereOp.regexp]: value } };
-            if (op === '!/') return { [name]: { [WhereOp.notRegexp]: value } };
+            if (op === ':') return {[name]: {[WhereOp.iLike]: `%${value}%`}};
+            if (op === '!:') return {[name]: {[WhereOp.notILike]: `%${value}%`}};
+            if (op === '=') return {[name]: {[WhereOp.iLike]: value}};
+            if (op === '/') return {[name]: {[WhereOp.regexp]: value}};
+            if (op === '!/') return {[name]: {[WhereOp.notRegexp]: value}};
         }
 
         if (field.type === 'integer' || field.type === 'float') {
-            if (op === '=') return { [name]: value };
-            if (op === '>') return { [name]: { [WhereOp.gt]: value } };
-            if (op === '<') return { [name]: { [WhereOp.lt]: value } };
-            if (op === '>=') return { [name]: { [WhereOp.gte]: value } };
-            if (op === '<=') return { [name]: { [WhereOp.lte]: value } };
-            if (op === '!=') return { [name]: { [WhereOp.ne]: value } };
+            if (op === '=') return {[name]: value};
+            if (op === '>') return {[name]: {[WhereOp.gt]: value}};
+            if (op === '<') return {[name]: {[WhereOp.lt]: value}};
+            if (op === '>=') return {[name]: {[WhereOp.gte]: value}};
+            if (op === '<=') return {[name]: {[WhereOp.lte]: value}};
+            if (op === '!=') return {[name]: {[WhereOp.ne]: value}};
         }
 
         if (field.type === 'boolean') {
-            if (op === '=') return { [name]: value };
-            if (op === '!=') return { [name]: { [WhereOp.ne]: value } };
+            if (op === '=') return {[name]: value};
+            if (op === '!=') return {[name]: {[WhereOp.ne]: value}};
         }
 
         if (field.type === 'date') {
-            if (op === '=') return { [name]: value };
-            if (op === '>') return { [name]: { [WhereOp.gt]: value } };
-            if (op === '<') return { [name]: { [WhereOp.lt]: value } };
-            if (op === '>=') return { [name]: { [WhereOp.gte]: value } };
-            if (op === '<=') return { [name]: { [WhereOp.lte]: value } };
+            if (op === '=') return {[name]: value};
+            if (op === '>') return {[name]: {[WhereOp.gt]: value}};
+            if (op === '<') return {[name]: {[WhereOp.lt]: value}};
+            if (op === '>=') return {[name]: {[WhereOp.gte]: value}};
+            if (op === '<=') return {[name]: {[WhereOp.lte]: value}};
         }
 
         if (field.type.startsWith('list')) {
-            if (op === ':') return { [name]: { [WhereOp.contains]: value } };
-            if (op === '=') return { [name]: { [WhereOp.iLike]: value } };
-            if (op === '!=') return { [name]: { [WhereOp.ne]: value } };
-            if(op === '!:') return ({
+            if (op === ':') return {[name]: {[WhereOp.contains]: value}};
+            if (op === '=') return {[name]: {[WhereOp.iLike]: value}};
+            if (op === '!=') return {[name]: {[WhereOp.ne]: value}};
+            if (op === '!:') return ({
                 [WhereOp.not]: {
-                    [name]: { [WhereOp.contains]: value }
+                    [name]: {[WhereOp.contains]: value}
                 }
             })
 
             if (op === '>=') return {
                 [WhereOp.and]: [
-                    { [name]: { [WhereOp.contains]: value } },
-                    { [name]: { [WhereOp.gt]: value } }
+                    {[name]: {[WhereOp.contains]: value}},
+                    {[name]: {[WhereOp.gt]: value}}
                 ]
             };
 
@@ -252,9 +273,9 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
 
         // Subgroups are part of a pre-pass
         if (Array.isArray(token)) {
-            const { where, ignored: sub_ignored } = parse_tokens(token);
+            const {where, ignored: sub_ignored} = parse_tokens(token);
             calculated = [...calculated, ...where];
-            ignored = { ...ignored, ...sub_ignored };
+            ignored = {...ignored, ...sub_ignored};
             continue;
         }
 
@@ -265,6 +286,7 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
         }
 
         const where = parse_where(token);
+        console.log(where);
         if (typeof where === 'string') ignored[token] = where;
         else calculated.push(where);
     }
@@ -314,28 +336,34 @@ const parse_tokens = (tokens: (string | string[])[]): { where: WhereOptions[], i
 
         }
 
-    };
+    }
+    ;
 
-    return { where: calculated_where, ignored };
+    return {where: calculated_where, ignored};
 
 }
 
 export default async function ParseQuery(query: string, page: number = 0) {
 
     try {
-        const { where: parsed_where, ignored } = parse_tokens(tokenize(query));
+        const {where: parsed_where, ignored} = parse_tokens(tokenize(query));
 
-        let where = { [WhereOp.and]: parsed_where }
+        let where = {[WhereOp.and]: parsed_where}
 
-        const result_count = await (await Database.get()).models.Items.count({ where });
-        const results = await (await Database.get()).models.Items.findAll({ where, limit: 40, offset: page * 40, order: [['name', 'ASC']] });
+        const result_count = await (await Database.get()).models.Items.count({where});
+        const results = await (await Database.get()).models.Items.findAll({
+            where,
+            limit: 40,
+            offset: page * 40,
+            order: [['name', 'ASC']]
+        });
 
-        return { ignored, count: result_count, results };
+        return {ignored, count: result_count, results};
     } catch (err) {
         console.log(`• Error parsing query: ${query}`)
         console.log(`\t${(err as Error).message}`);
         console.log((err as Error).stack?.split('\n').map(l => `\t${l}`).join('\n'))
-        return { error: String(err) }
+        return {error: String(err)}
     }
 
 }

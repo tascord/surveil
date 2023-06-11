@@ -14,6 +14,7 @@ class Manager {
 
     private model_parser: ModelParser;
     private model_shape: RawField[];
+    private _default_field?: RawField;
 
     constructor() {
         this.model_parser = new ModelParser([]);
@@ -28,11 +29,18 @@ class Manager {
         this.run(data);
     }
 
-    public run(exported: { data: Array<{ [key: string]: any }>, fields: RawField[], overwrite: boolean, skip: boolean, port: number, extensions: Extension[] }) {
+    public run(exported: { data: Array<{ [key: string]: any }>, fields: RawField[], overwrite: boolean, skip: boolean, port: number, extensions: Extension[], default_field?: string }) {
 
-        const { fields, data, overwrite, skip, port } = exported;
+        const { fields, data, overwrite, skip, port, default_field } = exported;
+
         this.model_parser = new ModelParser(data, overwrite);
         this.model_parser.parse(fields, skip);
+
+        if(default_field) {
+            const field = this.get_model_field(default_field);
+            if(!field) throw new Error(`Default field '${default_field}' not found.`);
+            this._default_field = field;
+        }
 
         server(port, fields).then(([app, router]) => {
             for (const extension of exported.extensions) {
@@ -48,6 +56,10 @@ class Manager {
                 Array.isArray(field.alias) ? field.alias.some(alias => alias.toLowerCase() === name) : field.alias?.toLowerCase() === name
             )
         ));
+    }
+
+    public get default_field() {
+        return this._default_field;
     }
 
 }

@@ -28,7 +28,7 @@ class PluginManager {
         for (const subfolder of plugins) {
 
             if (FolderMap[subfolder] === undefined) continue;
-            if (statSync(`./plugins/${subfolder}`).isDirectory() === false) continue;
+            if (!statSync(`./plugins/${subfolder}`).isDirectory()) continue;
 
             const files = readdirSync(`./plugins/${subfolder}`).filter(file => file.endsWith('.js'));
             for (const file of files) {
